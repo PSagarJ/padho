@@ -1,4 +1,5 @@
 # Backend Schema Document
+
 ## Project: Padho — Accessible Document Reader
 
 **Status:** Draft v1.0
@@ -15,6 +16,7 @@ The app works fully **without any account** (anonymous mode, no persistence beyo
 ## 2. Collections
 
 ### 2.1 `users`
+
 ```js
 {
   _id: ObjectId,
@@ -35,11 +37,12 @@ The app works fully **without any account** (anonymous mode, no persistence beyo
 ```
 
 ### 2.2 `scans`
+
 ```js
 {
   _id: ObjectId,
   userId: ObjectId | null,     // null for anonymous/local-only scans never synced
-  documentType: "medicine_label" | "bill" | "government_letter" | "general",
+  documentType: "medicine_label" | "bill" | "government_letter" | "form" | "general",
   ocrConfidence: Number,        // 0.0 - 1.0
   extractedText: String,        // raw OCR output (text only, never image)
   plainSummary: String,
@@ -61,6 +64,7 @@ The app works fully **without any account** (anonymous mode, no persistence beyo
 ```
 
 ### 2.3 `reminders` (stretch, depends on F18)
+
 ```js
 {
   _id: ObjectId,
@@ -88,11 +92,13 @@ users (many) ───< (many) users            [caregiverLinks, self-referencin
 ## 4. Auth Logic
 
 ### 4.1 Approach
+
 - **Anonymous-first.** No login required to use any core feature (scan, read, understand).
 - Login is **optional**, offered only when a user wants History or Caregiver Link.
 - Keep auth as simple as possible: email or phone + password, using JWT for session management. (An OTP-based phone login is a reasonable alternative if simpler for your target users, but adds an SMS-provider cost — stick with password auth for v1 to stay free.)
 
 ### 4.2 Flow
+
 ```
 Register:  POST /api/auth/register { identifier, password }
            -> bcrypt hash password -> save user -> return JWT
@@ -106,6 +112,7 @@ Protected requests:
 ```
 
 ### 4.3 Password & Token Rules
+
 - Passwords hashed with bcrypt (min. 10 salt rounds), never stored plain.
 - JWT secret stored in `.env`, never committed.
 - Token expiry: reasonable default (e.g., 7 days), refresh not required for a portfolio-scale project.
@@ -128,3 +135,4 @@ Protected requests:
 - Document **images** — never uploaded to the backend at all; OCR happens client-side.
 - Full OCR text is stored only if the user is logged in and history is enabled; anonymous users' data lives only in browser localStorage and clears when they clear site data.
 - No analytics/tracking identifiers tied to document content.
+- Contents of scanned forms and any ID numbers (e.g., Aadhaar), ever.
