@@ -1,12 +1,20 @@
 # Project State: Padho
 
-**Last updated:** 2026-10-01
+**Last updated:** 2026-10-03
 
 ## Current Phase
-Phase 0: Discovery & Design — **complete**
-Next: Phase 1 — Foundation
+
+Phase 1: Foundation — **complete**
+Next: Phase 2 — Capture & OCR
+
+## Live URLs
+
+- Backend (Render, free tier): https://padho-api.onrender.com (health check: /api/health)
+- Frontend (Vercel): [paste your Vercel URL here]
+- Note: Render free tier sleeps after ~15 min idle. Open /api/health once before any demo to wake it.
 
 ## Decisions Log
+
 - Project name: Padho
 - Stack: MERN (React/Vite + Express + MongoDB), PWA for v1, possible Expo port later
 - LLM calls mocked during development; real API only for tuning/demo (cost control)
@@ -18,31 +26,50 @@ Next: Phase 1 — Foundation
 - One pipeline for medicine, form and bill/letter types; priority: medicine, forms, bills
 - Medicine v1 reads only what is printed; general drug info deferred for safety
 - Form contents and ID numbers (e.g., Aadhaar) are never stored or logged
+- Phase 1: client and server live in one repo as two separate apps (client/ and server/)
+- Phase 1: Express uses ES modules; /api/health reports database status so deploy problems are easy to diagnose
+- Phase 1: allowed CORS origins come from a comma-separated CLIENT_ORIGIN env variable, so one codebase works for local dev, preview and production
+- Phase 1: ESLint chosen as linter (standard, template default, well documented)
+- Phase 1: PWA built with vite-plugin-pwa (autoUpdate service worker); icons generated from one SVG (public/icon.svg) with @vite-pwa/assets-generator
+- Phase 1: free hosting — Vercel (frontend), Render (backend), MongoDB Atlas (database, own project and cluster for Padho); secrets only in host settings, never in the repo
 
 ## Done
-- User interviews with older and younger people from different regions
-- Biggest frustration identified, with a real quote: "I am able to read this, but I don't know what to fill in this specific section."
-- PRD v1.1 and TRD v1.1 (form explainer, updated `/api/analyze` contract with `fields`)
-- Backend Schema updated (`form` type; form contents never stored)
-- UI/UX Brief updated (Form Result screen, wireframes reference)
-- App Flow and Implementation Plan written (see /docs)
-- Wireframes v1 (one combined image of 5 screens) in `docs/wireframes/`
-- GitHub repo created and docs pushed
+
+- Phase 0: user interviews, PRD v1.1, TRD v1.1, schema/UI/App Flow/Implementation docs, wireframes v1, GitHub repo
+- Phase 1: Express server connected to MongoDB Atlas with /api/health
+- Phase 1: Vite + React client calling the backend and showing "Server: ok, database: connected"
+- Phase 1: installable PWA (manifest, service worker, generated icons)
+- Phase 1: backend deployed on Render, frontend deployed on Vercel
+- Phase 1 exit check passed: app installed on an Android phone's home screen and the deployed frontend reached the deployed backend
 
 ## Pending / Next Up
-- Phase 1: Foundation (client/ with Vite + React, server/ with Express, MongoDB Atlas connection, .env.example files, basic PWA install, hello-world deploy)
+
+- Phase 2: Capture & OCR (camera capture with file-upload fallback, image preprocessing, Tesseract.js with English + Hindi + Marathi, confidence display, low-confidence/empty-text handling)
 - Split wireframes into separate per-screen images (later)
+- Delete unused Vite template files in client/ (src/App.css, src/assets/hero.png, react.svg, vite.svg, public/icons.svg)
 
 ## Known Issues / Open Questions
+
 - Wireframes v1 are a draft. Fix when building the real UI:
   - Medicine sample text must be label-only (no "what it treats" or "continue for life")
   - Add icons to the three Action Card sections
   - Add Home/Back controls on screens 2-5
   - Check body text (20px+), button labels (18px+) and touch targets (56px+) against the UI brief
+- Render free tier cold start (30-60 s after idle); acceptable for demo, document in README
+- Chrome DevTools shows optional "richer install UI" warnings about manifest screenshots; ignored for now
 - Tesseract accuracy on Devanagari and on forms (boxes/tables) is untested
 - Languages beyond English/Hindi/Marathi are out of scope for v1
 - Users who cannot read or type need voice; full no-reading use is a stretch goal
 - Next interview round: use open questions, include a medicine label and a bill
 
+## Lessons Learned (Phase 1)
+
+- Windows PowerShell here does not accept `&&`; use `;` between commands
+- Always check the folder in the prompt before running `npm install`
+- `.env` is read only at startup: restart the server after editing it
+- Keep one setting per line in `.env` (two on one line silently broke CORS)
+- Test the PWA with `npm run build` then `npm run preview`; the service worker does not exist in `npm run dev`
+
 ## Next Phase Starting Point
-Phase 1 exit check: a blank app is installable on an Android phone's home screen, and the deployed frontend can call a test endpoint on the deployed backend.
+
+Phase 2 exit check: you can photograph a real printed document and see reasonably accurate extracted text on screen, with a visible confidence indicator.

@@ -1,10 +1,13 @@
 # Technical Requirement Document (TRD)
+
 ## Project: Padho: Accessible Document Reader
 
 **Status:** Draft v1.1 (updated after Phase 0 user interviews)
 **Last updated:** 2026-10-01
 
 ### Changelog
+
+- **v1.2:** Phase 1 notes: CLIENT_ORIGIN is a comma-separated list; hosting confirmed as Vercel (frontend) and Render (backend).
 - **v1.1:** Added `form` document type and optional `fields` list to the `/api/analyze` contract. Added privacy rules for form contents (no storage, no logging). Added form notes to the OCR pipeline and mock/real analyze services. Added `docs/wireframes/` to the folder structure.
 - **v1.0:** Initial draft.
 
@@ -21,28 +24,28 @@
         +--> [Web Speech API]        (browser-native TTS + voice input)
 ```
 
-Key principle: **images never leave the device.** OCR runs client-side. Only extracted *text* (not images) is ever sent to the backend, and only when calling the plain-language/classification step.
+Key principle: **images never leave the device.** OCR runs client-side. Only extracted _text_ (not images) is ever sent to the backend, and only when calling the plain-language/classification step.
 
 Second principle (added v1.1): **form contents are never stored or logged.** The app explains what a form asks for; it never saves what the user writes or any ID numbers (e.g., Aadhaar) found in the text.
 
 ## 2. Tech Stack
 
-| Layer | Choice | Why |
-|---|---|---|
-| Frontend framework | React (Vite) | You already know React; Vite gives fast dev builds |
-| App type | PWA (installable, manifest + service worker) | Free, instant demo link, no app store needed for v1 |
-| Styling | CSS Modules or plain CSS (no heavy UI library) | Full control over accessibility (contrast, font scaling) |
-| Backend | Node.js + Express | Matches MERN; simple REST API |
-| Database | MongoDB Atlas (free tier, Mongoose ODM) | Stores preferences, scan summaries, reminders — not images, not form contents |
-| OCR | Tesseract.js (client-side, WASM) | Free, on-device, supports eng + hin + mar language packs |
-| Text-to-speech | Web Speech API (`speechSynthesis`) | Free, native to browser, no API key |
-| Voice input | Web Speech API (`SpeechRecognition` / `webkitSpeechRecognition`) | Free; Chrome has the best support |
-| Plain-language + classification | LLM API, called server-side only | Mocked during build (see Section 8 of project instructions); real call only for tuning/demo |
-| Auth (optional, for caregiver link/history) | JWT (jsonwebtoken + bcrypt) | Simple, standard, no paid service needed |
-| Hosting — frontend | Vercel or Netlify (free tier) | Free HTTPS, free subdomain |
-| Hosting — backend | Render or Railway (free tier) | Free tier sleeps when idle — acceptable for a demo |
-| Hosting — database | MongoDB Atlas (free tier, 512MB) | Plenty for this project's scale |
-| Version control | Git + GitHub | Standard |
+| Layer                                       | Choice                                                           | Why                                                                                         |
+| ------------------------------------------- | ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| Frontend framework                          | React (Vite)                                                     | You already know React; Vite gives fast dev builds                                          |
+| App type                                    | PWA (installable, manifest + service worker)                     | Free, instant demo link, no app store needed for v1                                         |
+| Styling                                     | CSS Modules or plain CSS (no heavy UI library)                   | Full control over accessibility (contrast, font scaling)                                    |
+| Backend                                     | Node.js + Express                                                | Matches MERN; simple REST API                                                               |
+| Database                                    | MongoDB Atlas (free tier, Mongoose ODM)                          | Stores preferences, scan summaries, reminders — not images, not form contents               |
+| OCR                                         | Tesseract.js (client-side, WASM)                                 | Free, on-device, supports eng + hin + mar language packs                                    |
+| Text-to-speech                              | Web Speech API (`speechSynthesis`)                               | Free, native to browser, no API key                                                         |
+| Voice input                                 | Web Speech API (`SpeechRecognition` / `webkitSpeechRecognition`) | Free; Chrome has the best support                                                           |
+| Plain-language + classification             | LLM API, called server-side only                                 | Mocked during build (see Section 8 of project instructions); real call only for tuning/demo |
+| Auth (optional, for caregiver link/history) | JWT (jsonwebtoken + bcrypt)                                      | Simple, standard, no paid service needed                                                    |
+| Hosting — frontend                          | Vercel or Netlify (free tier)                                    | Free HTTPS, free subdomain                                                                  |
+| Hosting — backend                           | Render or Railway (free tier)                                    | Free tier sleeps when idle — acceptable for a demo                                          |
+| Hosting — database                          | MongoDB Atlas (free tier, 512MB)                                 | Plenty for this project's scale                                                             |
+| Version control                             | Git + GitHub                                                     | Standard                                                                                    |
 
 ## 3. Why PWA over native app (for v1)
 
@@ -55,21 +58,23 @@ Second principle (added v1.1): **form contents are never stored or logged.** The
 ## 4. API Design (high-level — detailed endpoints defined during Phase 1/4)
 
 ### 4.1 Public (no auth required)
-| Method | Endpoint | Purpose |
-|---|---|---|
-| POST | `/api/analyze` | Accepts OCR'd text + language; returns `{ documentType, confidence, plainSummary, keyFields, fields, actionCard, warnings }` |
-| GET | `/api/health` | Basic health check |
+
+| Method | Endpoint       | Purpose                                                                                                                      |
+| ------ | -------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| POST   | `/api/analyze` | Accepts OCR'd text + language; returns `{ documentType, confidence, plainSummary, keyFields, fields, actionCard, warnings }` |
+| GET    | `/api/health`  | Basic health check                                                                                                           |
 
 ### 4.2 Authenticated (optional, for history/caregiver features)
-| Method | Endpoint | Purpose |
-|---|---|---|
-| POST | `/api/auth/register` | Create account (email or phone) |
-| POST | `/api/auth/login` | Login, returns JWT |
-| GET | `/api/history` | Get user's saved scan summaries |
-| POST | `/api/history` | Save a new scan summary (text only; for `form` scans, summary and type only, never the extracted text) |
-| DELETE | `/api/history/:id` | Delete one scan |
-| DELETE | `/api/history` | Delete all history ("delete my data") |
-| POST | `/api/caregiver/link` | (stretch) Link a caregiver account |
+
+| Method | Endpoint              | Purpose                                                                                                |
+| ------ | --------------------- | ------------------------------------------------------------------------------------------------------ |
+| POST   | `/api/auth/register`  | Create account (email or phone)                                                                        |
+| POST   | `/api/auth/login`     | Login, returns JWT                                                                                     |
+| GET    | `/api/history`        | Get user's saved scan summaries                                                                        |
+| POST   | `/api/history`        | Save a new scan summary (text only; for `form` scans, summary and type only, never the extracted text) |
+| DELETE | `/api/history/:id`    | Delete one scan                                                                                        |
+| DELETE | `/api/history`        | Delete all history ("delete my data")                                                                  |
+| POST   | `/api/caregiver/link` | (stretch) Link a caregiver account                                                                     |
 
 **Note:** `/api/analyze` never receives images — only text already extracted client-side. This keeps the privacy promise structural, not just policy.
 
@@ -111,8 +116,9 @@ Second principle (added v1.1): **form contents are never stored or logged.** The
 ```
 
 ### 5.1 Rules for the contract
+
 - `fields` is only filled for `documentType: "form"`. For all other types it is omitted or an empty array. The frontend must handle both.
-- `fields[].expects` describes the *kind* of answer ("a number", "your full name as on your ID", "a date"). It must **never** contain a suggested personal value.
+- `fields[].expects` describes the _kind_ of answer ("a number", "your full name as on your ID", "a date"). It must **never** contain a suggested personal value.
 - `keyFields.dosage` and `keyFields.timing` are filled **only** if printed on the label. If not printed, leave them empty and let the warning say so. Never guess dosage.
 - For `medicine_label`, `warnings` always contains the pharmacist/doctor caution, regardless of confidence. This is enforced in server code, not only in the prompt.
 - For `form`, `needsAction` is normally `true` (the user has to fill it); `byWhen` may be empty unless a deadline is printed.
@@ -121,7 +127,9 @@ Second principle (added v1.1): **form contents are never stored or logged.** The
 During development, this endpoint is served by a mock/rule-based function with the exact same shape (see project instructions, Section 8). Swapping to the real LLM call later changes only the function body, not the contract — so the frontend never needs to change.
 
 ### 5.2 Mock coverage (Phase 4)
+
 The mock must cover at least these sample documents, so the whole UI can be built without any API cost:
+
 1. Medicine label (with the always-on safety warning)
 2. Bill (amount + due date)
 3. Government/bank letter
@@ -155,10 +163,8 @@ JWT_SECRET=
 LLM_API_KEY=         # only needed once real API calls are enabled
 LLM_API_URL=
 ANALYZE_MODE=mock    # "mock" or "llm" — switches the analyze service
-PORT=5000
-
-# client/.env
-VITE_API_BASE_URL=
+PORT=5000            # Render sets this automatically in production
+CLIENT_ORIGIN=http://localhost:5173,http://localhost:4173   # comma-separated allowed frontend origins; add the Vercel URL in production
 ```
 
 ## 9. Folder Structure (high-level — finalized in Phase 1)
