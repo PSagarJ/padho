@@ -10,7 +10,7 @@ Next: Phase 2 — Capture & OCR
 ## Live URLs
 
 - Backend (Render, free tier): https://padho-api.onrender.com (health check: /api/health)
-- Frontend (Vercel): [paste your Vercel URL here]
+- Frontend (Vercel):https://padho-six.vercel.app
 - Note: Render free tier sleeps after ~15 min idle. Open /api/health once before any demo to wake it.
 
 ## Decisions Log
