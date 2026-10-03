@@ -6,8 +6,11 @@ import mongoose from "mongoose";
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-app.use(cors({ origin: process.env.CLIENT_ORIGIN }));
-app.use(express.json());
+const allowedOrigins = (process.env.CLIENT_ORIGIN || "")
+  .split(",")
+  .map((o) => o.trim());
+
+app.use(cors({ origin: allowedOrigins }));app.use(express.json());
 
 app.get("/api/health", (req, res) => {
   res.json({
