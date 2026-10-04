@@ -33,18 +33,35 @@ function extractParagraphs(data) {
   return paragraphs;
 }
 
+// DEV ONLY (remove before demo): try settings from the URL, e.g.
+//   ?size=3200&adaptive=1&psm=11
+function devOverrides() {
+  const q = new URLSearchParams(window.location.search);
+  return {
+    maxSide: q.get("size") ? Number(q.get("size")) : undefined,
+    adaptive: q.get("adaptive") === "1",
+    psm: q.get("psm") || undefined, // 3=auto (default), 6=one block, 11=sparse text
+  };
+}
+
 export async function recognizeText(
   file,
   language = "en",
   { preprocess = true, onProgress } = {},
 ) {
-  const image = await preprocessImage(file, { enabled: preprocess });
-
+  const dev = devOverrides();
+  const image = await preprocessImage(file, {
+    enabled: preprocess,
+    maxSide: dev.maxSide,
+    adaptive: dev.adaptive,
+  });
   const worker = await createWorker(LANG_MAP[language] ?? "eng", 1, {
     logger: (m) => {
       if (onProgress && m.status === "recognizing text") onProgress(m.progress);
     },
   });
+
+  if (dev.psm) await worker.setParameters({ tessedit_pageseg_mode: dev.psm });
 
   try {
     // 3rd argument asks for the detailed word-level output (needed in v6+)
