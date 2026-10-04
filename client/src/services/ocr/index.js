@@ -44,6 +44,14 @@ function devOverrides() {
   };
 }
 
+// Rough check that OCR output contains real words, not stray marks like "| I l".
+function readableRatio(text) {
+  const tokens = text.split(/\s+/).filter(Boolean);
+  if (tokens.length === 0) return 0;
+  const good = tokens.filter((t) => /[\p{L}\p{M}]{3,}/u.test(t)).length;
+  return good / tokens.length;
+}
+
 export async function recognizeText(
   file,
   language = "en",
@@ -56,7 +64,12 @@ export async function recognizeText(
     adaptive: dev.adaptive,
   });
 
-  const debug = { width: image.width, height: image.height, ...dev };
+  const debug = {
+    width: image.width,
+    height: image.height,
+    ...dev,
+    preview: image.toDataURL("image/jpeg", 0.5),
+  };
 
   const worker = await createWorker(LANG_MAP[language] ?? "eng", 1, {
     logger: (m) => {
@@ -93,7 +106,7 @@ export async function recognizeText(
       debug,
       paragraphs, // [[{text, confidence}, ...], ...]  (empty if word data unavailable)
       lowWordCount,
-      isEmpty: text.length < MIN_TEXT_LENGTH,
+      isEmpty: text.length < MIN_TEXT_LENGTH || readableRatio(text) < 0.3,
       isLowConfidence: confidence < LOW_CONFIDENCE_THRESHOLD,
     };
   } finally {

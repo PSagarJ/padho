@@ -7,7 +7,9 @@ export async function preprocessImage(
   file,
   { enabled = true, maxSide = DEFAULT_MAX_SIDE, adaptive = false } = {},
 ) {
-  const bitmap = await createImageBitmap(file);
+  const bitmap = await createImageBitmap(file, {
+    imageOrientation: "from-image",
+  });
   // Never upscales. A bigger maxSide keeps more detail from the phone photo.
   const scale = Math.min(1, maxSide / Math.max(bitmap.width, bitmap.height));
   const width = Math.round(bitmap.width * scale);

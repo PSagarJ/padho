@@ -9,6 +9,7 @@ export default function OcrResult({ result, onRetry, onBack }) {
       <main style={styles.page}>
         <h1>I couldn't find readable text</h1>
         <p>Try moving closer or improving the light.</p>
+        <DebugInfo debug={result.debug} />
         <button style={styles.primary} onClick={onRetry}>
           📷 Try again
         </button>
@@ -43,13 +44,7 @@ export default function OcrResult({ result, onRetry, onBack }) {
         {statusText}
       </p>
 
-      {result.debug && (
-        <p style={{ margin: 0, fontSize: 16 }}>
-          Test settings: image {result.debug.width}×{result.debug.height}px,
-          size={String(result.debug.maxSide)}, adaptive=
-          {String(result.debug.adaptive)}, psm={String(result.debug.psm)}
-        </p>
-      )}
+      <DebugInfo debug={result.debug} />
 
       {hasWordData ? (
         <div style={styles.text}>
@@ -138,3 +133,21 @@ const styles = {
     borderRadius: 12,
   },
 };
+
+function DebugInfo({ debug }) {
+  if (!debug) return null;
+  return (
+    <div>
+      <p style={{ margin: 0, fontSize: 16 }}>
+        Test settings: image {debug.width}×{debug.height}px, size=
+        {String(debug.maxSide)}, adaptive={String(debug.adaptive)}, psm=
+        {String(debug.psm)}
+      </p>
+      <img
+        src={debug.preview}
+        alt="What the reader saw"
+        style={{ width: "100%", border: "1px solid #888" }}
+      />
+    </div>
+  );
+}
