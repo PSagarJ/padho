@@ -8,7 +8,9 @@ export default function OcrResult({ result, onRetry, onBack }) {
     return (
       <main style={styles.page}>
         <h1>I couldn't find readable text</h1>
-        <p>Try moving closer or improving the light.</p>
+        <p>
+          Try moving closer, improving the light, and holding the paper upright.
+        </p>{" "}
         <DebugInfo debug={result.debug} />
         <button style={styles.primary} onClick={onRetry}>
           📷 Try again

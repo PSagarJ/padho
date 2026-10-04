@@ -12,9 +12,10 @@ const LANG_MAP = {
 export const LOW_CONFIDENCE_THRESHOLD = 0.6; // whole page (App Flow doc)
 export const LOW_WORD_THRESHOLD = 0.6; // single word
 const MIN_TEXT_LENGTH = 10;
+const MIN_READABLE_RATIO = 0.3; // rough guess; tune in Phase 7
 
-// Turns Tesseract's nested output into paragraphs -> lines -> words.
-// Kept inside this file so the UI never depends on Tesseract's data shape.
+// Turns Tesseract's nested output into paragraphs -> words.
+// Kept here so the UI never depends on Tesseract's data shape.
 function extractParagraphs(data) {
   if (!Array.isArray(data.blocks)) return [];
   const paragraphs = [];
@@ -33,23 +34,27 @@ function extractParagraphs(data) {
   return paragraphs;
 }
 
-// DEV ONLY (remove before demo): try settings from the URL, e.g.
-//   ?size=3200&adaptive=1&psm=11
-function devOverrides() {
-  const q = new URLSearchParams(window.location.search);
-  return {
-    maxSide: q.get("size") ? Number(q.get("size")) : undefined,
-    adaptive: q.get("adaptive") === "1",
-    psm: q.get("psm") || undefined, // 3=auto (default), 6=one block, 11=sparse text
-  };
-}
-
 // Rough check that OCR output contains real words, not stray marks like "| I l".
 function readableRatio(text) {
   const tokens = text.split(/\s+/).filter(Boolean);
   if (tokens.length === 0) return 0;
   const good = tokens.filter((t) => /[\p{L}\p{M}]{3,}/u.test(t)).length;
   return good / tokens.length;
+}
+
+// DEV ONLY: settings from the URL for Phase 7 experiments, e.g.
+//   ?psm=11            sparse text mode (better for box-heavy forms)
+//   ?size=3200         longer image side in px (never upscales)
+//   ?adaptive=1        adaptive threshold (lowered confidence in our tests)
+//   ?debug=1           show test settings + the cleaned image on the result screen
+function devOverrides() {
+  const q = new URLSearchParams(window.location.search);
+  return {
+    maxSide: q.get("size") ? Number(q.get("size")) : undefined,
+    adaptive: q.get("adaptive") === "1",
+    psm: q.get("psm") || undefined,
+    debug: q.get("debug") === "1",
+  };
 }
 
 export async function recognizeText(
@@ -64,38 +69,21 @@ export async function recognizeText(
     adaptive: dev.adaptive,
   });
 
-  const debug = {
-    width: image.width,
-    height: image.height,
-    ...dev,
-    preview: image.toDataURL("image/jpeg", 0.5),
-  };
-
   const worker = await createWorker(LANG_MAP[language] ?? "eng", 1, {
     logger: (m) => {
       if (onProgress && m.status === "recognizing text") onProgress(m.progress);
     },
   });
 
-  if (dev.psm) await worker.setParameters({ tessedit_pageseg_mode: dev.psm });
-
   try {
-    // 3rd argument asks for the detailed word-level output (needed in v6+)
+    if (dev.psm) await worker.setParameters({ tessedit_pageseg_mode: dev.psm });
+
+    // 3rd argument asks for word-level output (needed in tesseract.js v6+)
     const { data } = await worker.recognize(image, {}, { blocks: true });
 
     const text = (data.text ?? "").trim();
     const confidence = (data.confidence ?? 0) / 100;
     const paragraphs = extractParagraphs(data);
-    // Dev only: lets us tune LOW_WORD_THRESHOLD from real data. Remove before demo.
-    console.table(
-      paragraphs
-        .flat()
-        .filter((w) => w.confidence < 0.85)
-        .map((w) => ({
-          word: w.text,
-          confidence: Math.round(w.confidence * 100),
-        })),
-    );
     const lowWordCount = paragraphs
       .flat()
       .filter((w) => w.confidence < LOW_WORD_THRESHOLD).length;
@@ -103,11 +91,22 @@ export async function recognizeText(
     return {
       text,
       confidence,
-      debug,
-      paragraphs, // [[{text, confidence}, ...], ...]  (empty if word data unavailable)
+      paragraphs,
       lowWordCount,
-      isEmpty: text.length < MIN_TEXT_LENGTH || readableRatio(text) < 0.3,
+      isEmpty:
+        text.length < MIN_TEXT_LENGTH ||
+        readableRatio(text) < MIN_READABLE_RATIO,
       isLowConfidence: confidence < LOW_CONFIDENCE_THRESHOLD,
+      debug: dev.debug
+        ? {
+            width: image.width,
+            height: image.height,
+            maxSide: dev.maxSide,
+            adaptive: dev.adaptive,
+            psm: dev.psm,
+            preview: image.toDataURL("image/jpeg", 0.5),
+          }
+        : null,
     };
   } finally {
     await worker.terminate();

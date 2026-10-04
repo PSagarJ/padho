@@ -32,13 +32,14 @@ This plan mirrors the phases already defined in the project instructions (Sectio
 
 ## Phase 2 — Capture & OCR
 
-- [ ] Build Camera Capture screen (live camera access + capture button; file upload fallback)
-- [ ] Image preprocessing: grayscale, contrast boost, resize before OCR
-- [ ] Integrate Tesseract.js with English + Hindi + Marathi language packs
-- [ ] Display extracted text + confidence score
-- [ ] Handle low-confidence and empty-text edge cases (per App Flow doc Section 8)
+- [x] Build Camera Capture screen (file input with capture + upload fallback)
+- [x] Image preprocessing: grayscale, contrast boost, resize before OCR
+- [x] Integrate Tesseract.js with English + Hindi + Marathi language packs
+- [x] Display extracted text + confidence score (page level + underlined low-confidence words)
+- [x] Handle low-confidence and empty-text edge cases (per App Flow doc Section 8)
+- [x] Verify on a real phone photo and real forms (see docs/ocr-experiments.md)
 
-**Exit check:** You can photograph a real printed document and see reasonably accurate extracted text on screen, with a visible confidence indicator.
+**Exit check:** You can photograph a real printed document and see reasonably accurate extracted text on screen, with a visible confidence indicator. **Passed 2026-10-04.**
 
 ## Phase 3 — Reader View & Speech
 
