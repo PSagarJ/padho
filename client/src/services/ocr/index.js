@@ -55,6 +55,9 @@ export async function recognizeText(
     maxSide: dev.maxSide,
     adaptive: dev.adaptive,
   });
+
+  const debug = { width: image.width, height: image.height, ...dev };
+
   const worker = await createWorker(LANG_MAP[language] ?? "eng", 1, {
     logger: (m) => {
       if (onProgress && m.status === "recognizing text") onProgress(m.progress);
@@ -87,6 +90,7 @@ export async function recognizeText(
     return {
       text,
       confidence,
+      debug,
       paragraphs, // [[{text, confidence}, ...], ...]  (empty if word data unavailable)
       lowWordCount,
       isEmpty: text.length < MIN_TEXT_LENGTH,

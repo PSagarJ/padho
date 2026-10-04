@@ -43,6 +43,14 @@ export default function OcrResult({ result, onRetry, onBack }) {
         {statusText}
       </p>
 
+      {result.debug && (
+        <p style={{ margin: 0, fontSize: 16 }}>
+          Test settings: image {result.debug.width}×{result.debug.height}px,
+          size={String(result.debug.maxSide)}, adaptive=
+          {String(result.debug.adaptive)}, psm={String(result.debug.psm)}
+        </p>
+      )}
+
       {hasWordData ? (
         <div style={styles.text}>
           {result.paragraphs.map((words, i) => (
