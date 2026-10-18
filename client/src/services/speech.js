@@ -1,4 +1,5 @@
 // Web Speech API wrapper for Padho per Phase 3 requirements
+import { cleanOcrWord, formatWordForSpeech } from "./textSanitizer";
 
 export const isSpeechSupported = () => {
   return typeof window !== "undefined" && "speechSynthesis" in window;
@@ -40,6 +41,8 @@ export function getVoicesForLanguage(langCode = "en") {
 
 /**
  * Prepares paragraph word tokens into a flat indexed list with character offsets.
+ * Automatically cleans stray OCR symbols and expands acronyms ("API" -> "A. P. I.")
+ * for natural letter-by-letter speech playback while keeping visual text clean.
  */
 export function prepareSpokenTokens(paragraphs, fallbackText = "") {
   const tokens = [];
@@ -53,13 +56,20 @@ export function prepareSpokenTokens(paragraphs, fallbackText = "") {
         charOffset += 1;
       }
       words.forEach((w, wIndex) => {
-        const text = typeof w === "string" ? w : w.text;
+        const raw = typeof w === "string" ? w : w.text;
+        const text = cleanOcrWord(raw);
+        if (!text) return; // Drop pure noise/stray characters
+
         const confidence = typeof w === "object" ? w.confidence ?? 1 : 1;
+        // Phonetically format acronyms ("API" -> "A. P. I.") and abbreviations ("A/C" -> "Account")
+        const spokenWord = formatWordForSpeech(text);
+
         const start = charOffset;
-        const end = start + text.length;
+        const end = start + spokenWord.length;
 
         tokens.push({
-          text,
+          text, // Shown on screen
+          spokenText: spokenWord, // Read by Web Speech API
           confidence,
           pIndex,
           wIndex,
@@ -68,18 +78,23 @@ export function prepareSpokenTokens(paragraphs, fallbackText = "") {
           end,
         });
 
-        fullText += text + " ";
-        charOffset += text.length + 1;
+        fullText += spokenWord + " ";
+        charOffset += spokenWord.length + 1;
       });
     });
   } else if (fallbackText) {
-    // If no word-level data was available from OCR, split text
     const words = fallbackText.trim().split(/\s+/).filter(Boolean);
-    words.forEach((text) => {
+    words.forEach((raw) => {
+      const text = cleanOcrWord(raw);
+      if (!text) return;
+
+      const spokenWord = formatWordForSpeech(text);
       const start = charOffset;
-      const end = start + text.length;
+      const end = start + spokenWord.length;
+
       tokens.push({
         text,
+        spokenText: spokenWord,
         confidence: 1,
         pIndex: 0,
         wIndex: tokens.length,
@@ -87,8 +102,9 @@ export function prepareSpokenTokens(paragraphs, fallbackText = "") {
         start,
         end,
       });
-      fullText += text + " ";
-      charOffset += text.length + 1;
+
+      fullText += spokenWord + " ";
+      charOffset += spokenWord.length + 1;
     });
   }
 

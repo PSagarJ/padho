@@ -1,6 +1,6 @@
-// The ONLY file the UI imports for OCR. Swap the engine inside here later.
 import { createWorker } from "tesseract.js";
 import { preprocessImage } from "./preprocess";
+import { cleanOcrWord } from "../textSanitizer";
 
 // Our app language codes -> Tesseract language packs.
 const LANG_MAP = {
@@ -14,8 +14,8 @@ export const LOW_WORD_THRESHOLD = 0.6; // single word
 const MIN_TEXT_LENGTH = 10;
 const MIN_READABLE_RATIO = 0.3; // rough guess; tune in Phase 7
 
-// Turns Tesseract's nested output into paragraphs -> words.
-// Kept here so the UI never depends on Tesseract's data shape.
+// Turns Tesseract's nested output into paragraphs -> words,
+// stripping stray border/crease noise (| ~ ^ @ ; <)
 function extractParagraphs(data) {
   if (!Array.isArray(data.blocks)) return [];
   const paragraphs = [];
@@ -24,8 +24,11 @@ function extractParagraphs(data) {
       const words = [];
       for (const line of para.lines ?? []) {
         for (const w of line.words ?? []) {
-          const text = (w.text ?? "").trim();
-          if (text) words.push({ text, confidence: (w.confidence ?? 0) / 100 });
+          const raw = (w.text ?? "").trim();
+          const clean = cleanOcrWord(raw);
+          if (clean) {
+            words.push({ text: clean, confidence: (w.confidence ?? 0) / 100 });
+          }
         }
       }
       if (words.length) paragraphs.push(words);
@@ -81,9 +84,13 @@ export async function recognizeText(
     // 3rd argument asks for word-level output (needed in tesseract.js v6+)
     const { data } = await worker.recognize(image, {}, { blocks: true });
 
-    const text = (data.text ?? "").trim();
-    const confidence = (data.confidence ?? 0) / 100;
     const paragraphs = extractParagraphs(data);
+    // Build clean text from sanitized paragraphs so stray marks don't contaminate the document
+    const text =
+      paragraphs.length > 0
+        ? paragraphs.map((p) => p.map((w) => w.text).join(" ")).join("\n\n")
+        : (data.text ?? "").trim();
+    const confidence = (data.confidence ?? 0) / 100;
     const lowWordCount = paragraphs
       .flat()
       .filter((w) => w.confidence < LOW_WORD_THRESHOLD).length;
