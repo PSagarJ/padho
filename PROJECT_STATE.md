@@ -1,11 +1,11 @@
 # Project State: Padho
 
-**Last updated:** 2026-10-04
+**Last updated:** 2026-10-18
 
 ## Current Phase
 
-Phase 2: Capture & OCR — **complete** (exit check passed 2026-10-04: phone-camera photo read with text + visible confidence)
-Next: Phase 3 — Reader View & Speech
+Phase 3: Reader View & Speech — **complete** (exit check passed 2026-10-18: extracted text read aloud with word highlighting, full settings screen, contrast & font sizing persisted)
+Next: Phase 4 — Intelligence (Mocked First)
 
 ## Live URLs
 
@@ -41,6 +41,12 @@ Next: Phase 3 — Reader View & Speech
 - Phase 2: output with fewer than 30% real words counts as "couldn't read this" even if the confidence number looks fine
 - Phase 2: default segmentation stays the app default; sparse mode (psm=11) is far better on box-heavy forms but worse on text-heavy pages; automatic mode choice deferred to Phase 4/6
 - Phase 2: dev switches (?psm, ?size, ?adaptive, ?debug=1) are kept for Phase 7 comparisons; the debug panel only shows with ?debug=1
+- Phase 3: Web Speech API (`speechSynthesis`) used for client-side zero-cost TTS with rate control (0.8x, 1.0x, 1.25x) and language-based voice matching
+- Phase 3: word-by-word highlight uses `onboundary` charIndex mapped to token positions, highlighted with solid contrast background + shadow and auto-scrolled into center view
+- Phase 3: interactive tap-to-read enables jumping speech playback to any tapped word in Reader View
+- Phase 3: High Contrast mode (true black `#000000`, bright teal `#00C2C2` with AAA contrast, white text) meets WCAG standards
+- Phase 3: Settings are persisted in `localStorage` under `padho_settings`
+- Phase 3: Deleted unused Vite template assets (src/App.css, hero.png, react.svg, vite.svg, public/icons.svg)
 
 ## Done
 
@@ -48,10 +54,16 @@ Next: Phase 3 — Reader View & Speech
 - Phase 1: server + MongoDB Atlas, Vite + React client, installable PWA, both deployed; exit check passed 2026-10-03
 - Phase 2: capture screen (camera + upload), preprocessing, Tesseract.js v7 OCR (eng/hin/mar), progress screen, result screen with page confidence badge and word-level underlining, empty-text and error handling, readable-text check, dev experiment switches
 - Phase 2: experiments logged in docs/ocr-experiments.md (about 14 runs on newspapers and four forms)
+- Phase 3: large-text Reader View component, Web Speech API integration, synchronized word-by-word highlight with auto-scroll and interactive tap-to-read, sticky accessible playback controls (Read Aloud/Pause, Read Again, Slower/Faster), Settings screen with live font-size stepper/preview, contrast mode (normal warm vs high-contrast black), speech speed selector, voice picker with test voice button, localStorage persistence; exit check passed 2026-10-18
 
 ## Pending / Next Up
 
-- Phase 3: Reader View, speech (speechSynthesis), word-by-word highlight, Settings screen (the OCR word list in result.paragraphs feeds the highlighting)
+- Phase 4: Intelligence (Mocked First)
+  - Define `/api/analyze` contract per TRD Section 5
+  - Build `mockAnalyze.js` with rule-based/mock logic covering 4 document types (medicine label, bill, government letter, general text)
+  - Build the Action Card UI (What is this / Do I need to act / By when)
+  - Add medicine warning disclaimer banner
+  - Build `llmAnalyze.js` with real LLM free-tier integration switchable via env flag
 - Phase 4 design notes from OCR testing:
   - The form result must never imply it found every field (address-table labels were lost on a Marathi form); say "if a box is missing, scan that part again"
   - One page can hold several separate applications (voter ID Form 8); help the user find which section applies to them
@@ -65,7 +77,6 @@ Next: Phase 3 — Reader View & Speech
   - mar vs mar+eng; preprocessing on vs off; plain text vs forms
   - whether punctuation attached to words lowers their confidence
   - Latin-looking word inside a Devanagari paragraph as a suspicion heuristic (forms legitimately contain English)
-- Delete unused Vite template files in client/ (src/App.css, src/assets/hero.png, react.svg, vite.svg, public/icons.svg) after checking nothing imports them
 - Move temporary inline styles to CSS when the real UI is built
 - Split wireframes into separate per-screen images (later)
 
@@ -108,6 +119,12 @@ Phase 2:
 - A cached PWA can serve old code: open the URL in normal Chrome and reload twice
 - Import paths are case-sensitive on Vercel (Linux) even though Windows forgives them
 
+Phase 3:
+
+- Vite React fast refresh expects components and contexts to be isolated from plain constants; moving constants and context definitions to dedicated files eliminates lint warnings and refresh issues
+- Spoken word highlighting via `SpeechSynthesisUtterance.onboundary` maps cleanly to pre-calculated character ranges of OCR paragraph tokens
+- Web Speech API on some browser versions pauses unexpectedly during long audio streams; a periodic heartbeat (`speechSynthesis.pause(); speechSynthesis.resume();`) prevents unexpected cutoff
+
 ## Next Phase Starting Point
 
-Phase 3 builds on `result.paragraphs` (words with confidence) from the OCR wrapper. Phase 3 exit check: extracted text can be read aloud with visible word highlighting, and all settings visibly change the reading experience.
+Phase 4 builds the `/api/analyze` contract (TRD Section 5) and `mockAnalyze.js` backend analysis endpoint, wiring the Action Card UI (What is this / Do I need to act / By when). Phase 4 exit check: The full flow — scan, read aloud, see plain-language summary and Action Card — works end-to-end using mock data, with zero API cost. Real LLM swap-in changes no frontend code.

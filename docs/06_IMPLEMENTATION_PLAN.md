@@ -43,14 +43,14 @@ This plan mirrors the phases already defined in the project instructions (Sectio
 
 ## Phase 3 — Reader View & Speech
 
-- [ ] Build large-text Reader View component
-- [ ] Integrate `speechSynthesis` for text-to-speech with rate control
-- [ ] Implement word-by-word highlight synced to speech via `onboundary` events
-- [ ] Add Read Again / Read Slower controls
-- [ ] Build Settings screen: font size, contrast mode, voice choice, speed, language
-- [ ] Persist settings (localStorage for anonymous users)
+- [x] Build large-text Reader View component
+- [x] Integrate `speechSynthesis` for text-to-speech with rate control
+- [x] Implement word-by-word highlight synced to speech via `onboundary` events
+- [x] Add Read Again / Read Slower controls
+- [x] Build Settings screen: font size, contrast mode, voice choice, speed, language
+- [x] Persist settings (localStorage for anonymous users)
 
-**Exit check:** Extracted text can be read aloud with visible word highlighting, and all settings visibly change the reading experience.
+**Exit check:** Extracted text can be read aloud with visible word highlighting, and all settings visibly change the reading experience. **Passed 2026-10-18.**
 
 ## Phase 4 — Intelligence (Mocked First)
 

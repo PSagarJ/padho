@@ -1,21 +1,45 @@
 import { LOW_WORD_THRESHOLD } from "../services/ocr";
+import { useSettings } from "../context/useSettings";
 
-// Phase 2 only: shows OCR text + confidence. The real Action Card comes in Phase 4.
-export default function OcrResult({ result, onRetry, onBack }) {
+// Shows OCR text + confidence, and provides primary entry into Reader View (Phase 3)
+export default function OcrResult({ result, onOpenReader, onRetry, onBack }) {
+  const { contrast, fontSize } = useSettings();
+  const isHigh = contrast === "high";
   const percent = Math.round(result.confidence * 100);
 
   if (result.isEmpty) {
     return (
-      <main style={styles.page}>
+      <main
+        style={{
+          ...styles.page,
+          backgroundColor: isHigh ? "#000000" : "#FAF8F3",
+          color: isHigh ? "#FFFFFF" : "#1A1A1A",
+        }}
+      >
         <h1>I couldn't find readable text</h1>
-        <p>
+        <p style={{ fontSize: `${fontSize}px` }}>
           Try moving closer, improving the light, and holding the paper upright.
-        </p>{" "}
+        </p>
         <DebugInfo debug={result.debug} />
-        <button style={styles.primary} onClick={onRetry}>
+        <button
+          style={{
+            ...styles.primary,
+            backgroundColor: isHigh ? "#00C2C2" : "#0B6E6E",
+            color: isHigh ? "#000000" : "#FFFFFF",
+          }}
+          onClick={onRetry}
+        >
           📷 Try again
         </button>
-        <button style={styles.secondary} onClick={onBack}>
+        <button
+          style={{
+            ...styles.secondary,
+            backgroundColor: isHigh ? "#1E1E1E" : "#FFFFFF",
+            color: isHigh ? "#FFFFFF" : "#1A1A1A",
+            borderColor: isHigh ? "#8899A6" : "#4A5A6A",
+          }}
+          onClick={onBack}
+        >
           🏠 Home
         </button>
       </main>
@@ -33,23 +57,49 @@ export default function OcrResult({ result, onRetry, onBack }) {
       : `✅ I read this clearly (${percent}%)`;
 
   return (
-    <main style={styles.page}>
+    <main
+      style={{
+        ...styles.page,
+        backgroundColor: isHigh ? "#000000" : "#FAF8F3",
+        color: isHigh ? "#FFFFFF" : "#1A1A1A",
+      }}
+    >
       <h1>Here is what I read</h1>
 
       <p
         role="status"
         style={{
           ...styles.badge,
-          borderColor: needsCheck ? "#B8560A" : "#2E7D32",
+          backgroundColor: isHigh ? "#121212" : "#FFFFFF",
+          borderColor: needsCheck
+            ? isHigh
+              ? "#FFB84D"
+              : "#B8560A"
+            : isHigh
+              ? "#4CAF50"
+              : "#2E7D32",
         }}
       >
         {statusText}
       </p>
 
+      {/* Primary Call to Action: Open Reader View & Read Aloud */}
+      <button
+        style={{
+          ...styles.primary,
+          backgroundColor: isHigh ? "#00C2C2" : "#0B6E6E",
+          color: isHigh ? "#000000" : "#FFFFFF",
+        }}
+        onClick={onOpenReader}
+        aria-label="Open Reader View and listen to document"
+      >
+        📖 Read Aloud (Reader View)
+      </button>
+
       <DebugInfo debug={result.debug} />
 
       {hasWordData ? (
-        <div style={styles.text}>
+        <div style={{ ...styles.text, fontSize: `${fontSize}px` }}>
           {result.paragraphs.map((words, i) => (
             <p key={i} style={{ margin: "0 0 16px" }}>
               {words.map((w, j) => (
@@ -57,7 +107,9 @@ export default function OcrResult({ result, onRetry, onBack }) {
                   key={j}
                   style={
                     w.confidence < LOW_WORD_THRESHOLD
-                      ? styles.lowWord
+                      ? isHigh
+                        ? styles.lowWordHigh
+                        : styles.lowWordNormal
                       : undefined
                   }
                   title={
@@ -76,6 +128,7 @@ export default function OcrResult({ result, onRetry, onBack }) {
         <pre
           style={{
             ...styles.text,
+            fontSize: `${fontSize}px`,
             whiteSpace: "pre-wrap",
             fontFamily: "inherit",
           }}
@@ -84,12 +137,30 @@ export default function OcrResult({ result, onRetry, onBack }) {
         </pre>
       )}
 
-      <button style={styles.primary} onClick={onRetry}>
-        📷 Scan again
-      </button>
-      <button style={styles.secondary} onClick={onBack}>
-        🏠 Home
-      </button>
+      <div style={styles.actionsRow}>
+        <button
+          style={{
+            ...styles.secondary,
+            backgroundColor: isHigh ? "#1E1E1E" : "#FFFFFF",
+            color: isHigh ? "#FFFFFF" : "#1A1A1A",
+            borderColor: isHigh ? "#8899A6" : "#4A5A6A",
+          }}
+          onClick={onRetry}
+        >
+          📷 Scan again
+        </button>
+        <button
+          style={{
+            ...styles.secondary,
+            backgroundColor: isHigh ? "#1E1E1E" : "#FFFFFF",
+            color: isHigh ? "#FFFFFF" : "#1A1A1A",
+            borderColor: isHigh ? "#8899A6" : "#4A5A6A",
+          }}
+          onClick={onBack}
+        >
+          🏠 Home
+        </button>
+      </div>
     </main>
   );
 }
@@ -99,40 +170,56 @@ const styles = {
     padding: 16,
     display: "flex",
     flexDirection: "column",
-    gap: 12,
+    gap: 16,
     fontSize: 20,
+    minHeight: "100vh",
+    boxSizing: "border-box",
   },
   badge: {
     margin: 0,
-    padding: 12,
+    padding: 14,
     border: "3px solid",
-    borderRadius: 12,
+    borderRadius: 14,
     fontWeight: 600,
+    fontSize: 18,
   },
-  text: { fontSize: 20, lineHeight: 1.6, wordBreak: "break-word" },
-  // Underline + background, so it's not colour alone
-  lowWord: {
+  text: { lineHeight: 1.6, wordBreak: "break-word" },
+  lowWordNormal: {
     textDecoration: "underline wavy #B8560A",
     textUnderlineOffset: 4,
     background: "#FBE9D6",
   },
+  lowWordHigh: {
+    textDecoration: "underline wavy #FFB84D",
+    textUnderlineOffset: 4,
+    background: "rgba(255, 184, 77, 0.25)",
+  },
   primary: {
-    minHeight: 72,
+    minHeight: 64,
     fontSize: 22,
-    fontWeight: 600,
-    background: "#0B6E6E",
-    color: "#fff",
+    fontWeight: 700,
+    borderRadius: 14,
     border: 0,
-    borderRadius: 12,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+  },
+  actionsRow: {
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr",
+    gap: 12,
+    marginTop: 8,
   },
   secondary: {
     minHeight: 56,
     fontSize: 18,
     fontWeight: 600,
-    background: "#fff",
-    color: "#1A1A1A",
-    border: "2px solid #4A5A6A",
     borderRadius: 12,
+    border: "2px solid",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
   },
 };
 
