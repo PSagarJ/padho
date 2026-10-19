@@ -1,5 +1,9 @@
 // Web Speech API wrapper for Padho per Phase 3 requirements
-import { cleanOcrWord, formatWordForSpeech } from "./textSanitizer";
+import {
+  cleanOcrWord,
+  formatWordForSpeech,
+  findBoxNoise,
+} from "./textSanitizer";
 
 export const isSpeechSupported = () => {
   return typeof window !== "undefined" && "speechSynthesis" in window;
@@ -27,7 +31,7 @@ export function getVoicesForLanguage(langCode = "en") {
   for (const voice of allVoices) {
     const vLang = voice.lang.toLowerCase();
     const isPref = preferredLocales.some((pref) =>
-      vLang.startsWith(pref.toLowerCase())
+      vLang.startsWith(pref.toLowerCase()),
     );
     if (isPref) {
       matched.push(voice);
@@ -55,12 +59,14 @@ export function prepareSpokenTokens(paragraphs, fallbackText = "") {
         fullText += "\n";
         charOffset += 1;
       }
+      const boxNoise = findBoxNoise(words); // empty boxes: shown, not spoken
       words.forEach((w, wIndex) => {
+        if (boxNoise.has(wIndex)) return;
         const raw = typeof w === "string" ? w : w.text;
         const text = cleanOcrWord(raw);
         if (!text) return; // Drop pure noise/stray characters
 
-        const confidence = typeof w === "object" ? w.confidence ?? 1 : 1;
+        const confidence = typeof w === "object" ? (w.confidence ?? 1) : 1;
         // Phonetically format acronyms ("API" -> "A. P. I.") and abbreviations ("A/C" -> "Account")
         const spokenWord = formatWordForSpeech(text);
 

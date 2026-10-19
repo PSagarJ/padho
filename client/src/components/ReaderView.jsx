@@ -60,7 +60,11 @@ export default function ReaderView({ result, onBack, onOpenSettings }) {
   };
 
   const speedLabel =
-    speed <= 0.8 ? "🐢 Slow (0.8x)" : speed <= 1.0 ? "🚶 Normal (1.0x)" : "⚡ Fast (1.2x)";
+    speed <= 0.8
+      ? "🐢 Slow (0.8x)"
+      : speed <= 1.0
+        ? "🚶 Normal (1.0x)"
+        : "⚡ Fast (1.2x)";
 
   return (
     <main
@@ -163,7 +167,7 @@ export default function ReaderView({ result, onBack, onOpenSettings }) {
               {paraWords.map((w, wIndex) => {
                 // Find token corresponding to this paragraph and word
                 const token = tokens.find(
-                  (t) => t.pIndex === pIndex && t.wIndex === wIndex
+                  (t) => t.pIndex === pIndex && t.wIndex === wIndex,
                 );
                 const isSpeaking =
                   token && token.globalIndex === activeWordIndex;
@@ -189,11 +193,15 @@ export default function ReaderView({ result, onBack, onOpenSettings }) {
                           ? styles.lowConfHigh
                           : styles.lowConfNormal
                         : {}),
+                      // Words with no token are not read aloud (empty boxes): dim them
+                      ...(!token ? { opacity: 0.45 } : {}),
                     }}
                     title={
-                      isLowConf
-                        ? "Possible reading uncertainty"
-                        : "Tap to read from here"
+                      !token
+                        ? "Not read aloud (looks like empty boxes)"
+                        : isLowConf
+                          ? "Possible reading uncertainty"
+                          : "Tap to read from here"
                     }
                   >
                     {w.text}{" "}
