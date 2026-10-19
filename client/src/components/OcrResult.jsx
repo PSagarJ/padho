@@ -2,7 +2,13 @@ import { LOW_WORD_THRESHOLD } from "../services/ocr";
 import { useSettings } from "../context/useSettings";
 
 // Shows OCR text + confidence, and provides primary entry into Reader View (Phase 3)
-export default function OcrResult({ result, onOpenReader, onRetry, onBack }) {
+export default function OcrResult({
+  result,
+  analysisFailed,
+  onOpenReader,
+  onRetry,
+  onBack,
+}) {
   const { contrast, fontSize } = useSettings();
   const isHigh = contrast === "high";
   const percent = Math.round(result.confidence * 100);
@@ -82,6 +88,12 @@ export default function OcrResult({ result, onOpenReader, onRetry, onBack }) {
       >
         {statusText}
       </p>
+
+      {analysisFailed && (
+        <p style={{ margin: 0, fontSize: 18 }}>
+          ⚠️ I can't explain this right now. I can still read it out loud.
+        </p>
+      )}
 
       {/* Primary Call to Action: Open Reader View & Read Aloud */}
       <button

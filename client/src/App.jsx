@@ -3,16 +3,21 @@ import CaptureScreen from "./components/CaptureScreen";
 import OcrResult from "./components/OcrResult";
 import ReaderView from "./components/ReaderView";
 import SettingsScreen from "./components/SettingsScreen";
+import ActionCard from "./components/ActionCard";
 import { SettingsProvider } from "./context/SettingsContext";
 import { useSettings } from "./context/useSettings";
 import { recognizeText } from "./services/ocr";
+import { analyzeText } from "./services/analyze";
 
 function MainApp() {
-  const [screen, setScreen] = useState("home"); // home | capture | processing | result | reader | settings | error
+  const [screen, setScreen] = useState("home"); // home | capture | processing | card | result | reader | settings | error
   const [prevScreen, setPrevScreen] = useState("home");
   const [progress, setProgress] = useState(0);
   const [result, setResult] = useState(null);
   const [preprocess, setPreprocess] = useState(true); // switchable for Phase 7 comparisons
+  const [analysis, setAnalysis] = useState(null);
+  const [analysisFailed, setAnalysisFailed] = useState(false);
+  const [stage, setStage] = useState("reading"); // reading | explaining
 
   const { language, contrast, fontSize } = useSettings();
   const isHigh = contrast === "high";
@@ -25,16 +30,43 @@ function MainApp() {
   const handleImage = async (file) => {
     setScreen("processing");
     setProgress(0);
+    setStage("reading");
+    setAnalysis(null);
+    setAnalysisFailed(false);
+
+    let r;
     try {
-      const r = await recognizeText(file, language, {
+      r = await recognizeText(file, language, {
         preprocess,
         onProgress: setProgress,
       });
-      setResult(r);
-      setScreen("result");
     } catch (err) {
       console.error("OCR recognition error:", err);
       setScreen("error");
+      return;
+    }
+    setResult(r);
+
+    // Nothing readable: the OCR result screen already handles this
+    if (r.isEmpty) {
+      setScreen("result");
+      return;
+    }
+
+    setStage("explaining");
+    try {
+      const a = await analyzeText({
+        text: r.text,
+        language,
+        ocrConfidence: r.confidence,
+      });
+      setAnalysis(a);
+      setScreen("card");
+    } catch (err) {
+      // PRIVACY: log the message only, never the text
+      console.error("Analyze error:", err.message);
+      setAnalysisFailed(true);
+      setScreen("result"); // reading + speech still work without the server
     }
   };
 
@@ -63,8 +95,18 @@ function MainApp() {
   // Screen: Capture (Camera / File input)
   if (screen === "capture") {
     return (
-      <CaptureScreen
-        onImage={handleImage}
+      <CaptureScreen onImage={handleImage} onBack={() => setScreen("home")} />
+    );
+  }
+
+  // Screen: Action Card (Phase 4)
+  if (screen === "card" && analysis) {
+    return (
+      <ActionCard
+        analysis={analysis}
+        onReadFullText={() => setScreen("reader")}
+        onSeeText={() => setScreen("result")}
+        onRetry={() => setScreen("capture")}
         onBack={() => setScreen("home")}
       />
     );
@@ -75,6 +117,7 @@ function MainApp() {
     return (
       <OcrResult
         result={result}
+        analysisFailed={analysisFailed}
         onOpenReader={() => setScreen("reader")}
         onRetry={() => setScreen("capture")}
         onBack={() => setScreen("home")}
@@ -97,9 +140,15 @@ function MainApp() {
         aria-live="polite"
       >
         <div style={{ fontSize: 48, marginBottom: 16 }}>📖</div>
-        <h1>Reading your document...</h1>
+        <h1>
+          {stage === "reading"
+            ? "Reading your document..."
+            : "Working out what it means..."}
+        </h1>
         <p style={{ fontSize: `${fontSize}px`, maxWidth: 400 }}>
-          {Math.round(progress * 100)}% done. The first time can take longer while language data loads.
+          {stage === "reading"
+            ? `${Math.round(progress * 100)}% done. The first time can take longer while language data loads.`
+            : "This can take up to a minute the first time."}
         </p>
       </main>
     );
@@ -120,7 +169,8 @@ function MainApp() {
         <div style={{ fontSize: 48, marginBottom: 16 }}>⚠️</div>
         <h1>Something went wrong</h1>
         <p style={{ fontSize: `${fontSize}px` }}>
-          I couldn't read that photo clearly. Please try again with good lighting.
+          I couldn't read that photo clearly. Please try again with good
+          lighting.
         </p>
         <button
           style={{
@@ -206,7 +256,9 @@ function MainApp() {
             borderColor: isHigh ? "#444444" : "#D8D3C8",
           }}
         >
-          <span>Language: <strong>{langLabels[language] || language}</strong></span>
+          <span>
+            Language: <strong>{langLabels[language] || language}</strong>
+          </span>
           <button
             onClick={() => navigateTo("settings")}
             style={{
@@ -224,7 +276,14 @@ function MainApp() {
         </div>
 
         {/* Temporary dev toggle for Phase 7 comparisons */}
-        <label style={{ fontSize: 16, display: "flex", alignItems: "center", gap: 8 }}>
+        <label
+          style={{
+            fontSize: 16,
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+          }}
+        >
           <input
             type="checkbox"
             checked={preprocess}
